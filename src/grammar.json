@@ -1,6 +1,7 @@
 {
   "$schema": "https://tree-sitter.github.io/tree-sitter/assets/schemas/grammar.schema.json",
   "name": "lustre",
+  "word": "id",
   "rules": {
     "source_file": {
       "type": "SEQ",
@@ -114,26 +115,50 @@
       ]
     },
     "id_ref": {
-      "type": "TOKEN",
+      "type": "PREC",
+      "value": 9999,
       "content": {
-        "type": "PREC",
-        "value": -2,
-        "content": {
-          "type": "PATTERN",
-          "value": "[_a-zA-Z][_'a-zA-Z0-9]*(::[_a-zA-Z][_'a-zA-Z0-9]*)?"
-        }
+        "type": "SEQ",
+        "members": [
+          {
+            "type": "CHOICE",
+            "members": [
+              {
+                "type": "SEQ",
+                "members": [
+                  {
+                    "type": "FIELD",
+                    "name": "package",
+                    "content": {
+                      "type": "SYMBOL",
+                      "name": "id"
+                    }
+                  },
+                  {
+                    "type": "STRING",
+                    "value": "::"
+                  }
+                ]
+              },
+              {
+                "type": "BLANK"
+              }
+            ]
+          },
+          {
+            "type": "FIELD",
+            "name": "member",
+            "content": {
+              "type": "SYMBOL",
+              "name": "id"
+            }
+          }
+        ]
       }
     },
     "id": {
-      "type": "TOKEN",
-      "content": {
-        "type": "PREC",
-        "value": -1,
-        "content": {
-          "type": "PATTERN",
-          "value": "[_a-zA-Z][_'a-zA-Z0-9]*"
-        }
-      }
+      "type": "PATTERN",
+      "value": "[_a-zA-Z][_'a-zA-Z0-9]*"
     },
     "_pragma": {
       "type": "REPEAT1",
@@ -3045,10 +3070,6 @@
                 "value": "[eE][+\\-]?\\d+"
               }
             ]
-          },
-          {
-            "type": "PATTERN",
-            "value": "\\d+\\."
           },
           {
             "type": "SEQ",

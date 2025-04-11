@@ -711,6 +711,32 @@
     }
   },
   {
+    "type": "id_ref",
+    "named": true,
+    "fields": {
+      "member": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "id",
+            "named": true
+          }
+        ]
+      },
+      "package": {
+        "multiple": false,
+        "required": false,
+        "types": [
+          {
+            "type": "id",
+            "named": true
+          }
+        ]
+      }
+    }
+  },
+  {
     "type": "id_ref_type",
     "named": true,
     "fields": {},
@@ -2675,6 +2701,10 @@
     "named": false
   },
   {
+    "type": "::",
+    "named": false
+  },
+  {
     "type": ";",
     "named": false
   },
@@ -2781,10 +2811,6 @@
   },
   {
     "type": "id",
-    "named": true
-  },
-  {
-    "type": "id_ref",
     "named": true
   },
   {

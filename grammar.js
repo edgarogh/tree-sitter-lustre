@@ -64,7 +64,7 @@ module.exports = grammar({
 
   extras: $ => [$._whitespace, $.line_comment, $.block_comment],
 
-  // word: $ => $.id,
+  word: $ => $.id,
 
   conflicts: $ => [
     [$.id_ref_type, $._expression1],
@@ -102,11 +102,18 @@ module.exports = grammar({
 
     // Ident 6 rules
 
-    id_ref: _ => token(prec(-2, /[_a-zA-Z][_'a-zA-Z0-9]*(::[_a-zA-Z][_'a-zA-Z0-9]*)?/)),
+    // TODO: extras should be forbidden inside this: there is no way to do that currently, AFAIK
+    id_ref: $ => prec(9999, seq(
+      optional(seq(
+        field('package', $.id),
+        '::',
+      )),
+      field('member', $.id),
+    )),
 
     // Ident rules
 
-    id: _ => token(prec(-1, IDENTIFIER_REGEX)), // TODO pragma
+    id: _ => IDENTIFIER_REGEX, // TODO pragma
     _pragma: $ => repeat1($.one_pragma),
     _id_no_pragma: _ => IDENTIFIER_REGEX,
     one_pragma: $ => seq(
