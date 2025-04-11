@@ -1,0 +1,37 @@
+{
+  "grammars": [
+    {
+      "name": "lustre",
+      "camelcase": "Lustre",
+      "scope": "source.lustre",
+      "file-types": [
+        "ec",
+        "lus"
+      ],
+      "injection-regex": "^lustre$"
+    }
+  ],
+  "metadata": {
+    "version": "0.1.0",
+    "license": "MIT",
+    "description": "Lustre (LV6) grammar for tree-sitter",
+    "authors": [
+      {
+        "name": "Edgar Onghena",
+        "email": "dev@edgar.bzh",
+        "url": "https://edgar.bzh/"
+      }
+    ],
+    "links": {
+      "repository": "https://github.com/edgarogh/tree-sitter-lustre"
+    }
+  },
+  "bindings": {
+    "c": true,
+    "go": true,
+    "node": true,
+    "python": true,
+    "rust": true,
+    "swift": true
+  }
+}
