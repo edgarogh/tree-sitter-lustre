@@ -70,8 +70,22 @@ module.exports = grammar({
     [$.id_ref_type, $._expression1],
   ],
 
+  supertypes: $ => [
+    $._one_decl,
+    $._one_provide,
+    $._equation,
+    $._expression,
+    $._static_param,
+    $._static_arg,
+    $._named_static_arg,
+    $._type,
+  ],
+
   rules: {
-    source_file: $ => seq(repeat($.include), repeat($._one_decl)),
+    source_file: $ => seq(
+      repeat($.include),
+      seq(repeat($._one_decl), repeat($._one_package_or_model)),
+    ),
 
     _whitespace: _ => /[\t\n\v ]/, // TODO(laxity): allow more characters but treat them as errors?
     line_comment: _ => /--.*/,
@@ -98,7 +112,62 @@ module.exports = grammar({
 
     // Package rules
 
+    _one_package_or_model: $ => choice($.package_decl, $.model_decl),
+    package_decl: $ => seq(
+      'package',
+      field('name', $.id),
+      choice($._package_definition, $._package_alias),
+    ),
+    _package_definition: $ => seq(
+      optional($.uses),
+      optional($.provides),
+      field('body', $.package_body),
+    ),
+    _package_alias: $ => seq(
+      choice('=', 'is'),
+      field('alias', $.package_alias),
+      ';',
+    ),
+    package_body: $ => seq('body', repeat($._one_decl), 'end'),
+    package_alias: $ => seq(
+      field('name', $.id),
+      '(',
+      separated1($._named_static_arg, choice(',', ';')),
+      ')'
+    ),
+    uses: $ => seq('uses', separated1($.id, ','), ';'),
+
     // Model rules
+
+    provides: $ => seq('provides', repeat1(seq($._one_provide, ';'))),
+    _one_provide: $ => choice($.const_provide, $.node_provide, $.type_provide),
+    const_provide: $ => seq(
+      'const',
+      field('name', $.id),
+      ':',
+      field('type', $._type),
+      optional(seq(
+        '=',
+        field('value', $._expression),
+      )),
+    ),
+    node_provide: $ => seq(
+      optional('unsafe'),
+      choice('node', 'function'),
+      field('name', $.id),
+      optional($.static_params),
+      $._node_profile,
+    ),
+    type_provide: $ => seq('type', $.one_type_decl),
+    model_decl: $ => seq(
+      'model',
+      field('name', $.id),
+      optional($.uses),
+      'needs',
+      repeat1(seq($._static_param, ';')),
+      optional($.provides),
+      field('body', $.package_body),
+    ),
 
     // Ident 6 rules
 
@@ -148,7 +217,7 @@ module.exports = grammar({
       $._node_profile,
       optional(';'),
       repeat($.one_local_decl),
-      $.node_body,
+      field('body', $.node_body),
       optional(choice('.', ';')),
     ),
     _node_alias: $ => seq(
@@ -179,9 +248,9 @@ module.exports = grammar({
 
     const_decl: $ => seq('const', repeat1(seq($.one_const_decl, ';'))),
     one_const_decl: $ => choice(
-      seq(separated1($.id, ','), ':', field('type', $._type)),
-      seq($.id, ':', field('type', $._type), '=', field('value', $._expression)),
-      seq($.id, '=', field('value', $._expression)),
+      seq(separated1(field('name', $.id), ','), ':', field('type', $._type)),
+      seq(field('name', $.id), ':', field('type', $._type), '=', field('value', $._expression)),
+      seq(field('name', $.id), '=', field('value', $._expression)),
     ),
 
     // Type decl rules
@@ -196,7 +265,7 @@ module.exports = grammar({
       $.enum_type_value,
       $.struct_type_value,
     ),
-    enum_type_value: $ => seq('enum', '{', separated1($.id, ','), '}'),
+    enum_type_value: $ => seq('enum', '{', separated1(field('constant', $.id), ','), '}'),
     struct_type_value: $ => seq(optional('struct'), '{', $._typed_valued_ids_list, '}'),
 
     // Simple type rules
@@ -216,7 +285,7 @@ module.exports = grammar({
       optional('unsafe'),
       'extern',
       choice('function', 'node'),
-      $.id,
+      field('name', $.id),
       $._node_profile,
       optional(';'),
     ),
@@ -225,12 +294,12 @@ module.exports = grammar({
 
     static_params: $ => seq('<<', separated($._static_param, ';'), '>>'),
     _static_param: $ => choice($.type_static_param, $.const_static_param, $.node_static_param),
-    type_static_param: $ => seq('type', $.id),
-    const_static_param: $ => seq('const', $.id, ':', $._type),
+    type_static_param: $ => seq('type', field('name', $.id)),
+    const_static_param: $ => seq('const', field('name', $.id), ':', field('type', $._type)),
     node_static_param: $ => seq(
       optional('unsafe'),
       choice('node', 'function'),
-      $.id,
+      field('name', $.id),
       $._node_profile,
     ),
 
@@ -243,6 +312,26 @@ module.exports = grammar({
     const_static_arg: $ => choice(seq('const', $._expression), $._surely_expression),
     node_static_arg: $ => choice(seq(choice('node', 'function'), $.effective_node), alias($.surely_node, $.effective_node)),
     op_static_arg: $ => $._predef_op,
+
+    _named_static_arg: $ => choice($.id_named_static_arg, $.type_named_static_arg, $.const_named_static_arg, $.node_named_static_arg, $.op_named_static_arg),
+    _named_static_arg_name: $ => seq(field('name', $.id), '='),
+    id_named_static_arg: $ => prec(999, seq( // conflicts with _surely_expression (_expression1 to be precise)
+      $._named_static_arg_name,
+      field('ref', $.id_ref),
+    )),
+    type_named_static_arg: $ => choice(
+      seq('type', $._named_static_arg_name, field('type', $._type)),
+      seq($._named_static_arg_name, field('type', $._surely_type)),
+    ),
+    const_named_static_arg: $ => choice(
+      seq('const', $._named_static_arg_name, field('value', $._expression)),
+      seq($._named_static_arg_name, field('value', $._surely_expression)),
+    ),
+    node_named_static_arg: $ => choice(
+      seq(choice('node', 'function'), $._named_static_arg_name, $.effective_node),
+      seq($._named_static_arg_name, alias($.surely_node, $.effective_node)),
+    ),
+    op_named_static_arg: $ => seq($._named_static_arg_name, $._predef_op),
 
     surely_node: $ => seq($.id_ref, $.static_args),
     _surely_type: $ => choice(
@@ -294,7 +383,7 @@ module.exports = grammar({
     )),
     select: $ => seq(
       field('from', $._expression),
-      token(prec(999, '..')),
+      token('..'),
       field('to', $._expression),
       optional(seq('step', field('step', $._expression))),
     ),
@@ -363,7 +452,7 @@ module.exports = grammar({
     call_expression: $ => prec.right(PREC.bracket, seq(
       field('node', $.id_ref),
       '(',
-      separated($._expression, ','),
+      separated(field('argument', $._expression), ','),
       ')',
     )),
 
@@ -405,7 +494,7 @@ module.exports = grammar({
     nary_expression: $ => seq(
       choice('#', 'nor'),
       '(',
-      separated($._expression, ','),
+      separated(field('operand', $._expression), ','),
       ')',
     ),
 
@@ -442,7 +531,7 @@ module.exports = grammar({
       )),
       '}',
     ),
-    field_initializer: $ => seq($.id, '=', $._expression),
+    field_initializer: $ => seq(field('field', $.id), '=', field('value', $._expression)),
 
     // Constant rules
 
