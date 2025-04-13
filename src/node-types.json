@@ -1486,6 +1486,11 @@
     }
   },
   {
+    "type": "real_literal",
+    "named": true,
+    "fields": {}
+  },
+  {
     "type": "select",
     "named": true,
     "fields": {
@@ -2235,10 +2240,6 @@
   {
     "type": "real",
     "named": false
-  },
-  {
-    "type": "real_literal",
-    "named": true
   },
   {
     "type": "returns",

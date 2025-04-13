@@ -4,6 +4,11 @@ This repository contains a **work-in-progress** tree-sitter grammar that should 
 
 > The language bindings that have a centralized package repository (PyPI, crates.io, ...) have not been published yet. I'll do that when the grammar is somewhat complete. You _should_ be able to use them using the git URL though, but I haven't tested.
 
+**Remark about encoding:** Lustre uses plain ASCII encoding. Input bytes greater than 127 (i.e. outside of ASCII) aren't straight up rejected, but the only grammar rules that will allow them are comments. This gives rise to two important observations:
+- While tree-sitter supports both UTF-8 and UTF-16, using UTF-16 is nonsensical, as Lustre won't parse the file, since only UTF-8 is compatible with ASCII.
+- Using another ASCII-compatible encoding than UTF-8 will not work, as tree-sitter requires UTF-8 input to be… well… valid UTF-8. This is unfortunate, because some Lustre files in the original repository are encoded in ISO-8859-1. There is no solution to this problem besides re-encoding the file beforehand.
+  - If `tree-sitter-lustre` is used as part of another standalone tool specifically for Lustre, I suggest trying to parse the file as UTF-8, and if that fails, map all bytes with value >127 to a Unicode [PUA](https://en.wikipedia.org/wiki/Private_Use_Areas), so that you'll be able to do the inverse operation if you want to retrieve the original bytes after parsing.
+
 ## Scope
 
 **The goal of this grammar is to be strictly identical to the official one.** I plan on using it in [a tool](https://gricad-gitlab.univ-grenoble-alpes.fr/Projets-INFO4/22-23/26/rustre) that I want to be 100% compatible with the official compiler implementation, so divergences with the specification are _not_ desirable. _However_, if having some laxity is useful to someone, we could discuss on defining multiple "dialects" of Lustre; the baseline — spec compliant — dialect, and a more tolerant one. Since the grammar DSL is plain old JS, it's very easy to wrap it in a function, with parameters to customize what is and what is not accepted depending on the use case. Then, we'd need to decide which of these dialects is actually published to package registries. I'd be OK with publishing the laxer one, because my tool will most likely use a fork of this repository anyway.

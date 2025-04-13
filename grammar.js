@@ -62,6 +62,8 @@ module.exports = grammar({
 
   extras: $ => [$._whitespace, $.line_comment, $.block_comment],
 
+  externals: $ => [$._identifier_ref_package, $._single_dot_real_literal],
+
   word: $ => $._identifier,
 
   supertypes: $ => [
@@ -165,10 +167,9 @@ module.exports = grammar({
 
     // Ident 6 rules
 
-    // TODO: extras should be forbidden inside this: there is no way to do that currently, AFAIK (maybe with a scanner?)
     identifier_ref: $ => prec(9999, seq(
       optional(seq(
-        field('package', alias($._identifier, $.identifier)),
+        field('package', alias($._identifier_ref_package, $.identifier)),
         '::',
       )),
       field('member', alias($._identifier, $.identifier)),
@@ -537,16 +538,15 @@ module.exports = grammar({
 
     boolean_literal: _ => choice('true', 'false'),
     integer_literal: _ => /\d+/,
-    real_literal: _ => {
+    real_literal: $ => {
       const _real_exponent = /[eE][+\-]?\d+/;
 
-      // TODO(external scanner): due to the ambiguity between "/\d+\./" and "<integer_literal> '..'"
-      return token.immediate(choice(
+      return choice($._single_dot_real_literal, token.immediate(choice(
         seq(/\d+/, _real_exponent),
         seq(/\d+\./, _real_exponent),
         seq(/\d+\.\d+/, optional(_real_exponent)),
         seq(/\.\d+/, optional(_real_exponent))
-      ));
+      )));
     },
     _constant: $ => choice($.boolean_literal, $.integer_literal, $.real_literal),
   }
