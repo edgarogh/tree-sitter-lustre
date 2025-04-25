@@ -31,6 +31,12 @@ const PREC = {
   'else': 0,
 };
 
+// If I don't do that, there's an issue where the `int^2^2` type is interpreted as `int^(2^2)` despite the higher
+// precedence on the type's "^" operator.
+for (let key in PREC) {
+  PREC[key] -= 30;
+}
+
 /**
  * @param item {RuleOrLiteral}
  * @param separator {RuleOrLiteral}
@@ -38,6 +44,15 @@ const PREC = {
  */
 function separated1(item, separator) {
   return seq(item, repeat(seq(separator, item)));
+}
+
+/**
+ * @param item {RuleOrLiteral}
+ * @param separator {RuleOrLiteral}
+ * @returns RuleOrLiteral
+ */
+function separated2(item, separator) {
+  return seq(item, repeat1(seq(separator, item)));
 }
 
 /**
@@ -418,6 +433,7 @@ module.exports = grammar({
     _expression1: $ => choice(
       $._constant,
       $.identifier_expression,
+      $.parenthesized_expression,
       $.tuple_expression,
       $.table_expression,
       $.field_expression,
@@ -433,8 +449,17 @@ module.exports = grammar({
 
     identifier_expression: $ => $.identifier_ref,
 
-    tuple_expression: $ => seq('(', repeat($._expression), ')'),
-    table_expression: $ => seq('[', repeat($._expression), ']'),
+    parenthesized_expression: $ => seq('(', $._expression, ')'),
+    tuple_expression: $ => seq(
+      '(',
+      separated2(field('element', $._expression), ','),
+      ')',
+    ),
+    table_expression: $ => seq(
+      '[',
+      separated1(field('element', $._expression), ','),
+      ']',
+    ),
     // Struct expression is defined in its own eBNF group below
 
     field_expression: $ => prec.left(PREC.hat, seq(
