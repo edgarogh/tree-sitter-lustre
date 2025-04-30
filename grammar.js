@@ -31,6 +31,54 @@ const PREC = {
   'else': 0,
 };
 
+const KEYWORDS = [
+  'extern',
+  'unsafe',
+  'and',
+  'assert',
+  'bool',
+  'const',
+  'current',
+  'div',
+  'else',
+  'enum',
+  'function',
+  'false',
+  'if',
+  'int',
+  'let',
+  'mod',
+  'node',
+  'not',
+  'operator', // why is this in Lustre's operator table??? It's not used in the grammar.
+  'or',
+  'nor',
+  'fby',
+  'pre',
+  'real',
+  'returns',
+  'step',
+  'struct',
+  'tel',
+  'type',
+  'then',
+  'true',
+  'var',
+  'when',
+  'with',
+  'xor',
+  'model',
+  'package',
+  'needs',
+  'provides',
+  'uses',
+  'is',
+  'body',
+  'end',
+  'include',
+  'merge',
+];
+
 // If I don't do that, there's an issue where the `int^2^2` type is interpreted as `int^(2^2)` despite the higher
 // precedence on the type's "^" operator.
 for (let key in PREC) {
@@ -82,6 +130,7 @@ module.exports = grammar({
   word: $ => $._identifier,
 
   supertypes: $ => [
+    $._pragma,
     $._one_decl,
     $._one_provide,
     $._equation,
@@ -92,13 +141,20 @@ module.exports = grammar({
     $._type,
   ],
 
+  reserved: {
+    global: _ => [],
+    keywords: _ => KEYWORDS,
+  },
+
   rules: {
     source_file: $ => seq(
+      optional($._never),
       repeat($.include),
-      seq(repeat($._one_decl), repeat($._one_package_or_model)),
+      choice(repeat1($._one_decl), repeat1($._one_package_or_model)),
     ),
 
-    _whitespace: _ => /[\t\n\v ]/, // TODO(laxity): allow more characters but treat them as errors?
+    // The Lustre source code doesn't seem to allow FF as whitespace, but apparently my binary allows it???
+    _whitespace: _ => /[\t\n\r\f ]/, // TODO(laxity): allow more characters but treat them as errors?
     line_comment: _ => /--.*/,
     // Note: block comments cannot be nested as per the spec, no need for a non-context-free scanner
     // http://stackoverflow.com/questions/13014947/regex-to-match-a-c-style-multiline-comment/36328890#36328890
@@ -117,6 +173,7 @@ module.exports = grammar({
       ),
     )),
     string: _ => /"[^"]*"/,
+    _never: _ => seq(choice(), 'operator'),
 
     include: $ => seq('include', field('source', $.string)),
     _one_decl: $ => choice($.node_decl, $.type_decl, $.const_decl, $.ext_node_decl),
@@ -151,7 +208,12 @@ module.exports = grammar({
     // Model rules
 
     provides: $ => seq('provides', repeat1(seq($._one_provide, ';'))),
-    _one_provide: $ => choice($.const_provide, $.node_provide, $.type_provide),
+    _one_provide: $ => choice(
+      $.const_provide,
+      $.node_provide,
+      alias($.node_provide_node, $.node_provide),
+      $.type_provide,
+    ),
     const_provide: $ => seq(
       'const',
       field('name', $.identifier),
@@ -163,11 +225,20 @@ module.exports = grammar({
       )),
     ),
     node_provide: $ => seq(
-      optional('unsafe'),
-      choice('node', 'function'),
+      choice(
+        seq('unsafe', 'node'),
+        seq(optional('unsafe'), 'function'),
+      ),
       field('name', $.identifier),
       optional($.static_params),
       $._node_profile,
+    ),
+    node_provide_node: $ => seq(
+      'node',
+      field('name', $.identifier),
+      optional($.static_params),
+      $._node_profile,
+      repeat($._pragma),
     ),
     type_provide: $ => seq('type', $.one_type_decl),
     model_decl: $ => seq(
@@ -182,25 +253,28 @@ module.exports = grammar({
 
     // Ident 6 rules
 
-    identifier_ref: $ => prec(9999, seq(
-      optional(seq(
+    identifier_ref: $ => prec(9999, choice(
+      seq(
         field('package', alias($._identifier_ref_package, $.identifier)),
         '::',
-      )),
-      field('member', alias($._identifier, $.identifier)),
+        field('member', alias($._identifier, $.identifier)),
+      ),
+      field('member', alias(reserved('keywords', $._identifier), $.identifier)),
     )),
     _identifier: _ => /[_a-zA-Z][_'a-zA-Z0-9]*/,
 
     // Ident rules
 
-    identifier: $ => prec.right(20, seq($._identifier, repeat($.pragma))),
+    identifier: $ => prec.right(20, seq(reserved('keywords', $._identifier), repeat($._pragma))),
+    _pragma: $ => choice($.pragma, $.multiline_pragma),
     pragma: $ => seq(
       '%',
-      field('key', alias($._identifier, $.identifier)),
+      field('label', alias($._identifier, $.identifier)),
       ':',
       field('value', alias($._identifier, $.identifier)),
       '%',
     ),
+    multiline_pragma: $ => '(*@*)', // TODO
 
     // Node rules
 
@@ -209,7 +283,7 @@ module.exports = grammar({
       ':',
       field('type', $._type),
     ),
-    _typed_valued_ids_list: $ => separated1($.typed_valued_ids, ';'),
+    // _typed_valued_ids_list: $ => separated1($.typed_valued_ids, ';'),
     typed_valued_ids: $ => choice(
       seq(separated1(field('name', $.identifier), ','), ':', field('type', $._type)),
       seq(field('name', $.identifier), ':', field('type', $._type), '=', field('value', $._expression)),
@@ -225,6 +299,7 @@ module.exports = grammar({
     _node_definition: $ => seq(
       $._node_profile,
       optional(';'),
+      repeat($._pragma),
       repeat($.one_local_decl),
       field('body', $.node_body),
       optional(choice('.', ';')),
@@ -242,7 +317,7 @@ module.exports = grammar({
       field('output', $.params),
     ),
 
-    params: $ => seq('(', separated($.var_decl, ';'), ')'),
+    params: $ => seq('(', separated($.var_decl, ';'), optional(';'), ')'),
     one_local_decl: $ => choice(
       seq('var', repeat1(seq($.var_decl, ';'))),
       seq('const', repeat1(seq($.one_const_decl, ';'))),
@@ -280,7 +355,13 @@ module.exports = grammar({
       separated1(field('constant', $.identifier), ','),
       '}',
     ),
-    struct_type_value: $ => seq(optional('struct'), '{', $._typed_valued_ids_list, '}'),
+    struct_type_value: $ => seq(
+      optional('struct'),
+      '{',
+      separated1($.typed_valued_ids, ';'),
+      optional(';'),
+      '}',
+    ),
 
     // Simple type rules
 
@@ -302,6 +383,7 @@ module.exports = grammar({
       field('name', $.identifier),
       $._node_profile,
       optional(';'),
+      repeat($._pragma),
     ),
 
     // Static rules
@@ -368,7 +450,9 @@ module.exports = grammar({
     eq_equation: $ => seq(
       field('left', $.left_expression_list),
       '=',
+      repeat($._pragma),
       field('right', $._expression),
+      repeat($._pragma),
       ';',
     ),
 
@@ -436,6 +520,7 @@ module.exports = grammar({
       $.parenthesized_expression,
       $.tuple_expression,
       $.table_expression,
+      $.struct_expression,
       $.field_expression,
       $.index_expression,
       $.call_expression,
@@ -469,21 +554,21 @@ module.exports = grammar({
     )),
 
     index_expression: $ => prec.right(PREC.bracket, seq(
-      field('value', $._expression),
+      field('value', $._expression1),
       '[',
       field('index', choice($._expression, $.select)),
       ']',
     )),
 
     call_expression: $ => prec.right(PREC.bracket, seq(
-      field('node', $.identifier_ref),
+      field('node', $.effective_node),
       '(',
       separated(field('argument', $._expression), ','),
       ')',
     )),
 
     if_expression: $ => seq(
-      choice('if', 'when'),
+      choice('if', 'with'),
       field('condition', $._expression),
       'then',
       field('consequence', $._expression),
