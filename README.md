@@ -1,6 +1,6 @@
 # [Lustre (LV6)](https://www-verimag.imag.fr/DIST-TOOLS/SYNCHRONE/lustre-v6/) grammar for [tree-sitter](https://github.com/tree-sitter/tree-sitter)
 
-This repository contains a **work-in-progress** tree-sitter grammar that should parse Lustre (`.lus`) files, as well as its subset dialects (e.g. `.ec`).
+This repository contains a tree-sitter grammar that should parse Lustre (`.lus`) files, as well as its subset dialects (e.g. `.ec`).
 
 > The language bindings that have a centralized package repository (PyPI, crates.io, ...) have not been published yet. I'll do that when the grammar is somewhat complete. You _should_ be able to use them using the git URL though, but I haven't tested.
 

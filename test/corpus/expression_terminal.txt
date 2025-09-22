@@ -1,0 +1,56 @@
+=====
+Bools
+=====
+
+const not_false = true; not_true = false;
+
+-----
+
+(source_file
+  (const_decl
+    (one_const_decl
+      (identifier)
+      (boolean_literal))
+    (one_const_decl
+      (identifier)
+      (boolean_literal))))
+
+====
+Ints
+====
+
+const meaning_of_life = 42;
+
+----
+
+(source_file
+  (const_decl
+    (one_const_decl
+      (identifier)
+      (integer_literal))))
+
+=====
+Reals
+=====
+
+const a = 1.; b = 1.0; c = 1e0; d = 1e+0; e = 1e-0;
+
+-----
+
+(source_file
+  (const_decl
+    (one_const_decl
+      (identifier)
+      (real_literal))
+    (one_const_decl
+      (identifier)
+      (real_literal))
+    (one_const_decl
+      (identifier)
+      (real_literal))
+    (one_const_decl
+      (identifier)
+      (real_literal))
+    (one_const_decl
+      (identifier)
+      (real_literal))))

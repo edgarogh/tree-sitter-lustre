@@ -1,0 +1,41 @@
+======================
+Pragma (percent-style)
+:fail-fast
+======================
+
+type a %label:value% = int;
+
+----------------------
+
+(source_file
+  (type_decl
+    (one_type_decl
+      name: (identifier
+        (pragma
+          label: (identifier)
+          value: (pragma_value)))
+      type: (primitive_type))))
+
+==================
+Pragma (multiline)
+:fail-fast
+==================
+
+type a (*@ label value
+also value
+and still value*) = int;
+
+------------------
+
+(source_file
+  (type_decl
+    (one_type_decl
+      name: (identifier
+        (pragma
+          label: (identifier)
+          value: (pragma_value)))
+      type: (primitive_type))))
+
+===================
+TODO add more pragma locations
+===================

@@ -8,14 +8,32 @@ enum TokenType {
   IDENTIFIER_REF_PACKAGE,
 
   // Matches a real literal that looks exactly like `12.` (/\d+\./), BUT that is NOT followed by a second dot.
-  SINGLE_DOT_REAL_LITERAL
+  SINGLE_DOT_REAL_LITERAL,
+
+  // Matches a block comment (Pascal-style and C-style), but not a multiline pragma
+  BLOCK_COMMENT,
+
+  ML_PRAGMA_START_WHITESPACE,
+  ML_PRAGMA_VALUE,
 };
 
-// The scanner is context-free ;-)
-void * tree_sitter_lustre_external_scanner_create() { return NULL; }
-void tree_sitter_lustre_external_scanner_destroy(void *payload) { }
-unsigned tree_sitter_lustre_external_scanner_serialize(void *payload, char *buffer) { return 0; }
-void tree_sitter_lustre_external_scanner_deserialize(void *payload, const char *buffer, unsigned length) { }
+typedef struct {
+  bool is_in_ml_pragma;
+} state;
+
+void * tree_sitter_lustre_external_scanner_create() {
+    state* payload = ts_malloc(sizeof(state));
+    payload->is_in_ml_pragma = false;
+    return payload;
+}
+void tree_sitter_lustre_external_scanner_destroy(void *payload) { free(payload); }
+unsigned tree_sitter_lustre_external_scanner_serialize(void *payload, char *buffer) {
+  memcpy(buffer, payload, sizeof(state));
+  return sizeof(state);
+}
+void tree_sitter_lustre_external_scanner_deserialize(void *payload, const char *buffer, unsigned length) {
+  memcpy(payload, buffer, length);
+}
 
 // Actual lexing code
 
@@ -32,10 +50,40 @@ static bool is_identifier_continue_char(int c) {
 }
 
 bool tree_sitter_lustre_external_scanner_scan(
-  void *payload,
+  void *restrict _payload,
   TSLexer *lexer,
   const bool *valid_symbols
 ) {
+  state* payload = (state*) _payload;
+
+    if (valid_symbols[ML_PRAGMA_START_WHITESPACE]) {
+      payload->is_in_ml_pragma = true;
+      while (!is_identifier_start_char(lexer->lookahead)) {
+        lexer->advance(lexer, true);
+        if (lexer->eof(lexer)) {
+          break;
+        }
+      }
+      lexer->result_symbol = ML_PRAGMA_START_WHITESPACE;
+      return true;
+    }
+
+    if (payload->is_in_ml_pragma && valid_symbols[ML_PRAGMA_VALUE]) {
+      payload->is_in_ml_pragma = false;
+      lexer->result_symbol = ML_PRAGMA_VALUE;
+      // Eat everything until `*)` (excluded)
+      while (true) {
+        while (lexer->lookahead != '*') {
+          lexer->advance(lexer, false);
+          if (lexer->eof(lexer)) return true;
+        }
+        lexer->mark_end(lexer);
+        lexer->advance(lexer, false);
+        if (lexer->lookahead == ')') break;
+      }
+      return true;
+    }
+
   // Reminder: an identifier respects /[_a-zA-Z][_'a-zA-Z0-9]*/
   if (valid_symbols[IDENTIFIER_REF_PACKAGE] && is_identifier_start_char(lexer->lookahead)) {
     do { lexer->advance(lexer, false); } while (is_identifier_continue_char(lexer->lookahead));
@@ -57,6 +105,29 @@ bool tree_sitter_lustre_external_scanner_scan(
     lexer->advance(lexer, false);
     lexer->result_symbol = SINGLE_DOT_REAL_LITERAL;
     return lexer->lookahead != '.' && lexer->lookahead != 'e' && lexer->lookahead != 'E' && !is_digit(lexer->lookahead);
+  }
+
+  int first_char = lexer->lookahead;
+  if (valid_symbols[BLOCK_COMMENT] && (first_char == '(' || first_char == '/')) {
+    lexer->advance(lexer, false);
+    if (lexer->lookahead != '*') return false;
+    lexer->advance(lexer, false);
+    if (lexer->lookahead == '@' && first_char == '(') return false;
+    lexer->result_symbol = BLOCK_COMMENT;
+
+    int expected_end = first_char == '(' ? ')' : '/';
+    while (true) {
+      while (lexer->lookahead != '*') {
+        lexer->advance(lexer, false);
+        if (lexer->eof(lexer)) return false;
+      }
+      lexer->advance(lexer, false);
+      if (lexer->lookahead == expected_end) break;
+    }
+
+    lexer->advance(lexer, false);
+
+    return true;
   }
 
   return false;

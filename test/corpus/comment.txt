@@ -1,0 +1,57 @@
+============
+Line comment
+============
+
+-- This is a line comment
+
+------------
+
+(ERROR
+  (line_comment))
+
+============================
+Block comment (Pascal-style)
+============================
+
+(* This is a Pascal-style block comment *)
+
+----------------------------
+
+(ERROR
+  (block_comment))
+
+=======================
+Block comment (C-style)
+=======================
+
+/* This is a C-style block comment */
+
+-----------------------
+
+(ERROR
+  (block_comment))
+
+=======================
+Block comment (nesting)
+=======================
+
+(* Block comments cannot be nested  (* *)
+type i32 = int;
+
+-----------------------
+
+(source_file
+  (block_comment)
+  (type_decl
+    (one_type_decl
+      (identifier)
+      (primitive_type))))
+
+===========================
+Block comment (mixed-style)
+:error
+===========================
+
+(* This comment isn't correctly closed */
+
+---------------------------

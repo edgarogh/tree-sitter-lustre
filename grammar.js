@@ -125,7 +125,13 @@ module.exports = grammar({
 
   extras: $ => [$._whitespace, $.line_comment, $.block_comment],
 
-  externals: $ => [$._identifier_ref_package, $._single_dot_real_literal],
+  externals: $ => [
+    $._identifier_ref_package,
+    $._single_dot_real_literal,
+    $.block_comment,
+    $._ml_pragma_start_whitespace,
+    $._ml_pragma_value,
+  ],
 
   word: $ => $._identifier,
 
@@ -156,22 +162,6 @@ module.exports = grammar({
     // The Lustre source code doesn't seem to allow FF as whitespace, but apparently my binary allows it???
     _whitespace: _ => /[\t\n\r\f ]/, // TODO(laxity): allow more characters but treat them as errors?
     line_comment: _ => /--.*/,
-    // Note: block comments cannot be nested as per the spec, no need for a non-context-free scanner
-    // http://stackoverflow.com/questions/13014947/regex-to-match-a-c-style-multiline-comment/36328890#36328890
-    block_comment: _ => token(choice(
-      // Pascal/SML-style block comments
-      seq(
-        '(*',
-        /[^*]*\*+([^)*][^*]*\*+)*/,
-        ')',
-      ),
-      // C-style block comments
-      seq(
-        '/*',
-        /[^*]*\*+([^/*][^*]*\*+)*/,
-        '/',
-      ),
-    )),
     string: _ => /"[^"]*"/,
     _never: _ => seq(choice(), 'operator'),
 
@@ -266,15 +256,21 @@ module.exports = grammar({
     // Ident rules
 
     identifier: $ => prec.right(20, seq(reserved('keywords', $._identifier), repeat($._pragma))),
-    _pragma: $ => choice($.pragma, $.multiline_pragma),
+    _pragma: $ => choice($.pragma, alias($.multiline_pragma, $.pragma)),
     pragma: $ => seq(
       '%',
       field('label', alias($._identifier, $.identifier)),
       ':',
-      field('value', alias($._identifier, $.identifier)),
+      field('value', alias($._identifier, $.pragma_value)),
       '%',
     ),
-    multiline_pragma: $ => '(*@*)', // TODO
+    multiline_pragma: $ => prec(9999, seq(
+      '(*@',
+      $._ml_pragma_start_whitespace,
+      field('label', alias($._identifier, $.identifier)),
+      field('value', alias($._ml_pragma_value, $.pragma_value)),
+      '*)',
+    )),
 
     // Node rules
 
@@ -317,7 +313,7 @@ module.exports = grammar({
       field('output', $.params),
     ),
 
-    params: $ => seq('(', separated($.var_decl, ';'), optional(';'), ')'),
+    params: $ => seq('(', separated1($.var_decl, ';'), optional(';'), ')'),
     one_local_decl: $ => choice(
       seq('var', repeat1(seq($.var_decl, ';'))),
       seq('const', repeat1(seq($.one_const_decl, ';'))),
@@ -441,7 +437,7 @@ module.exports = grammar({
 
     node_body: $ => seq(
       'let',
-      repeat($._equation),
+      repeat1($._equation),
       'tel',
     ),
 

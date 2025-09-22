@@ -1,0 +1,31 @@
+=================
+Multiple includes
+=================
+
+include "util.lus"
+include "abc.lus"
+type integer = int;
+
+-----------------
+
+(source_file
+  (include
+    (string))
+  (include
+    (string))
+  (type_decl
+    (one_type_decl
+      (identifier)
+      (primitive_type))))
+
+===========================
+Include without declaration
+===========================
+
+include "util.lus"
+
+---------------------------
+
+(ERROR
+  (include
+    (string)))

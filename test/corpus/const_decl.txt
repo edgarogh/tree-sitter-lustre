@@ -1,0 +1,63 @@
+==================
+Const (value-only)
+:fail-fast
+==================
+
+const pi = 3.14;
+
+---
+
+(source_file
+  (const_decl
+    (one_const_decl
+      (identifier)
+      (real_literal))))
+
+======================
+Const (type and value)
+:fail-fast
+======================
+
+const pi: real = 3.14;
+
+----------------------
+
+(source_file
+  (const_decl
+    (one_const_decl
+      (identifier)
+      (primitive_type)
+      (real_literal))))
+
+================
+Const (external)
+================
+
+const pi, e: real;
+
+----------------
+
+(source_file
+  (const_decl
+    (one_const_decl
+      (identifier)
+      (identifier)
+      (primitive_type))))
+
+================
+Const (multiple)
+================
+
+const pi: real = 3.12; e = 2.71;
+
+----------------
+
+(source_file
+  (const_decl
+    (one_const_decl
+      (identifier)
+      (primitive_type)
+      (real_literal))
+    (one_const_decl
+      (identifier)
+      (real_literal))))

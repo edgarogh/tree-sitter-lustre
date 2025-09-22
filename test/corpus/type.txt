@@ -1,0 +1,160 @@
+================
+Type (primitive)
+:fail-fast
+================
+
+type i32 = int;
+
+-------------
+
+(source_file
+  (type_decl
+    (one_type_decl
+      (identifier)
+      (primitive_type))))
+
+================
+Type (local ref)
+================
+
+type time = _time;
+
+----------------
+
+(source_file
+  (type_decl
+    (one_type_decl
+      name: (identifier)
+      type: (identifier_type
+        (identifier_ref
+          member: (identifier))))))
+
+====================
+Type (non-local ref)
+====================
+
+type time = util::time;
+
+--------------------
+
+(source_file
+  (type_decl
+    (one_type_decl
+      name: (identifier)
+      type: (identifier_type
+        (identifier_ref
+          package: (identifier)
+          member: (identifier))))))
+
+===============
+Type (1D table)
+===============
+
+type b32 = bool^32;
+
+---------------
+
+(source_file
+  (type_decl
+    (one_type_decl
+      name: (identifier)
+      type: (table_type
+        element: (primitive_type)
+        length: (integer_literal)))))
+
+===============
+Type (2D table)
+===============
+
+type b = int^3^3;
+
+---------------
+
+(source_file
+  (type_decl
+    (one_type_decl
+      (identifier)
+      (table_type
+        (table_type
+          (primitive_type)
+          (integer_literal))
+        (integer_literal)))))
+
+====================================
+Type (table with complex expression)
+====================================
+
+type b = bool^(2**5);
+
+------------------------------------
+
+(source_file
+  (type_decl
+    (one_type_decl
+      (identifier)
+      (table_type
+        (primitive_type)
+        (parenthesized_expression
+          (binary_expression
+            (integer_literal)
+            (integer_literal)))))))
+
+===========
+Type (enum)
+===========
+
+type traffic_light_color = enum { RED, ORANGE, GREEN };
+
+-----------
+
+(source_file
+  (type_decl
+    (one_type_decl
+      (identifier)
+      (enum_type_value
+        (identifier)
+        (identifier)
+        (identifier)))))
+
+=============
+Type (struct)
+=============
+
+type color = { red: int; green: int; blue: int; };
+
+-------------
+
+(source_file
+  (type_decl
+    (one_type_decl
+      (identifier)
+      (struct_type_value
+        (typed_valued_ids
+          (identifier)
+          (primitive_type))
+        (typed_valued_ids
+          (identifier)
+          (primitive_type))
+        (typed_valued_ids
+          (identifier)
+          (primitive_type))))))
+
+======================
+Type (explicit struct)
+======================
+
+type complex = struct { r: real; i: real };
+
+----------------------
+
+(source_file
+  (type_decl
+    (one_type_decl
+      name: (identifier)
+      type: (struct_type_value
+        (typed_valued_ids
+          name: (identifier)
+          type: (primitive_type))
+        (typed_valued_ids
+          name: (identifier)
+          type: (primitive_type))))))

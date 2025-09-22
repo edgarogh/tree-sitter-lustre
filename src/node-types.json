@@ -158,10 +158,6 @@
     "named": true,
     "subtypes": [
       {
-        "type": "multiline_pragma",
-        "named": true
-      },
-      {
         "type": "pragma",
         "named": true
       }
@@ -1161,7 +1157,7 @@
     "fields": {},
     "children": {
       "multiple": true,
-      "required": false,
+      "required": true,
       "types": [
         {
           "type": "_equation",
@@ -1578,7 +1574,7 @@
     "fields": {},
     "children": {
       "multiple": true,
-      "required": false,
+      "required": true,
       "types": [
         {
           "type": "var_decl",
@@ -1621,7 +1617,7 @@
         "required": true,
         "types": [
           {
-            "type": "identifier",
+            "type": "pragma_value",
             "named": true
           }
         ]
@@ -2215,11 +2211,19 @@
     "named": false
   },
   {
+    "type": "(*@",
+    "named": false
+  },
+  {
     "type": ")",
     "named": false
   },
   {
     "type": "*",
+    "named": false
+  },
+  {
+    "type": "*)",
     "named": false
   },
   {
@@ -2417,10 +2421,6 @@
     "named": false
   },
   {
-    "type": "multiline_pragma",
-    "named": true
-  },
-  {
     "type": "needs",
     "named": false
   },
@@ -2443,6 +2443,10 @@
   {
     "type": "package",
     "named": false
+  },
+  {
+    "type": "pragma_value",
+    "named": true
   },
   {
     "type": "pre",

@@ -1,0 +1,68 @@
+=============
+Node (simple)
+=============
+
+node ident (a : bool) returns (r : bool)
+let
+  r = a;
+tel;
+
+-------------
+
+(source_file
+  (node_decl
+    name: (identifier)
+    input: (params
+      (var_decl
+        (typed_ids
+          name: (identifier)
+          type: (primitive_type))))
+    output: (params
+      (var_decl
+        (typed_ids
+          name: (identifier)
+          type: (primitive_type))))
+    body: (node_body
+      (eq_equation
+        left: (left_expression_list
+          (identifier_left_expression
+            (identifier)))
+        right: (identifier_expression
+          (identifier_ref
+            member: (identifier)))))))
+
+=======================
+Node (missing equation)
+:error
+=======================
+
+function ident (a : bool) returns (r : bool)
+let
+tel;
+
+-----------------------
+
+====================
+Node (missing input)
+:error
+====================
+
+function ident () returns (r : bool)
+let
+  r = false;
+tel;
+
+--------------------
+
+=====================
+Node (missing output)
+:error
+=====================
+
+function ident (a : bool) returns ()
+var r : bool;
+let
+  r = false;
+tel;
+
+---------------------
